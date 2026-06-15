@@ -33,9 +33,14 @@ def _make_slug(text: str) -> str:
         truncated = slug[:40]
         # Walk back to the last hyphen to avoid splitting a word
         last_hyphen = truncated.rfind("-")
-        if last_hyphen > 0:
+        if last_hyphen != -1:
             truncated = truncated[:last_hyphen]
         slug = truncated.rstrip("-")
+
+    if not slug:
+        raise EmptyIdeaError(
+            "Title produces an empty slug after ASCII transliteration."
+        )
 
     return slug
 
@@ -62,6 +67,15 @@ def normalize_file(path: Path, *, repo_path: Path | None = None) -> IdeaRecord:
     title: str | None = None
     one_line: str | None = None
 
+    # Pass 1: look for a blockquote pitch anywhere in the file.
+    # This ensures a blockquote wins over prose that appears before it.
+    for line in lines:
+        stripped = line.strip()
+        if stripped.startswith("> "):
+            one_line = stripped[2:].strip()
+            break
+
+    # Pass 2: extract H1 title and (when no blockquote found) first prose line.
     for line in lines:
         stripped = line.strip()
 
@@ -70,13 +84,13 @@ def normalize_file(path: Path, *, repo_path: Path | None = None) -> IdeaRecord:
             title = stripped[2:].strip()
             continue
 
-        # Extract blockquote pitch as one_line (first occurrence)
-        if one_line is None and stripped.startswith("> "):
-            one_line = stripped[2:].strip()
-            continue
-
-        # First non-heading, non-blank line as one_line fallback
-        if one_line is None and stripped and not stripped.startswith("#"):
+        # First non-heading, non-blank, non-blockquote line as one_line fallback
+        if (
+            one_line is None
+            and stripped
+            and not stripped.startswith("#")
+            and not stripped.startswith("> ")
+        ):
             one_line = stripped
 
     # Fallback: use first non-blank line as title if no H1 found
@@ -84,7 +98,7 @@ def normalize_file(path: Path, *, repo_path: Path | None = None) -> IdeaRecord:
         for line in lines:
             stripped = line.strip()
             if stripped:
-                title = stripped
+                title = stripped.lstrip("#").strip()
                 break
 
     if title is None:

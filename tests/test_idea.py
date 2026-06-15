@@ -46,12 +46,13 @@ class TestNormalizeString:
         long_title = "Alpha Beta Gamma Delta Epsilon Zeta Eta Theta Iota Kappa"
         record = normalize_string(long_title)
         assert len(record.slug) <= 40
+        assert record.slug == "alpha-beta-gamma-delta-epsilon-zeta-eta"
 
     def test_slug_truncates_at_word_boundary(self) -> None:
         long_title = "Alpha Beta Gamma Delta Epsilon Zeta Eta Theta Iota Kappa"
         record = normalize_string(long_title)
+        assert record.slug == "alpha-beta-gamma-delta-epsilon-zeta-eta"
         assert len(record.slug) <= 40
-        # Must not end with a hyphen after truncation
         assert not record.slug.endswith("-")
 
     def test_slug_ascii_only_unicode_input(self) -> None:
@@ -61,8 +62,12 @@ class TestNormalizeString:
 
     def test_slug_non_ascii_transliterated(self) -> None:
         record = normalize_string("Build Ünïcödé Thïng")
-        # U/n/i/c/o/d/e survive; diacritics are stripped
-        assert "unicode" in record.slug or "ncd" in record.slug
+        # Diacritics stripped via NFKD; base letters survive
+        assert record.slug == "build-unicode-thing"
+
+    def test_slug_all_cjk_raises(self) -> None:
+        with pytest.raises(EmptyIdeaError):
+            normalize_string("你好世界")
 
     def test_repo_path_stored(self) -> None:
         p = Path("/some/path")
@@ -114,3 +119,26 @@ class TestNormalizeFile:
         p = Path("/some/repo")
         record = normalize_file(idea_md, repo_path=p)
         assert record.repo_path == p
+
+    def test_blockquote_wins_over_prose_before_it(self, tmp_path: Path) -> None:
+        """Bug 1: prose appearing before the blockquote must not shadow it."""
+        idea_md = tmp_path / "idea.md"
+        idea_md.write_text(
+            "# My Product\n\nSome prose before the pitch.\n\n> The real pitch.\n"
+        )
+        record = normalize_file(idea_md)
+        assert record.one_line == "The real pitch."
+
+    def test_empty_file_raises(self, tmp_path: Path) -> None:
+        """Minor #7: an empty file should raise EmptyIdeaError."""
+        idea_md = tmp_path / "idea.md"
+        idea_md.write_text("")
+        with pytest.raises(EmptyIdeaError):
+            normalize_file(idea_md)
+
+    def test_h1_only_file_one_line_equals_title(self, tmp_path: Path) -> None:
+        """Minor #8: file with only an H1 and no body — one_line falls back to title."""
+        idea_md = tmp_path / "idea.md"
+        idea_md.write_text("# Just A Title\n")
+        record = normalize_file(idea_md)
+        assert record.one_line == record.title == "Just A Title"
