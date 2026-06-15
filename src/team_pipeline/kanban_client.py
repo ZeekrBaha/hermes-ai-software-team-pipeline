@@ -201,7 +201,7 @@ class HermesKanbanClient:
             args.extend(["--branch", branch])
         data = self._run(args, capture_json=True)
         try:
-            return data["id"]
+            return str(data["id"])
         except (KeyError, TypeError) as exc:
             raise HermesError(
                 cmd=args,
