@@ -27,7 +27,7 @@ _env = jinja2.Environment(
     loader=jinja2.FileSystemLoader(str(_TEMPLATES_DIR)),
     autoescape=False,  # Markdown output — HTML escaping not needed
     keep_trailing_newline=True,
-    undefined=jinja2.StrictUndefined,  # Raise on unknown variables instead of silently empty
+    undefined=jinja2.StrictUndefined,  # Raise on unknown variables, not silently empty
 )
 
 
