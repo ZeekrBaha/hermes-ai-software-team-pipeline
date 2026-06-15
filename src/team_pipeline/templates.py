@@ -25,8 +25,9 @@ _TEMPLATES_DIR: Path = Path(__file__).parent.parent.parent / "templates"
 
 _env = jinja2.Environment(
     loader=jinja2.FileSystemLoader(str(_TEMPLATES_DIR)),
-    autoescape=False,
+    autoescape=False,  # Markdown output — HTML escaping not needed
     keep_trailing_newline=True,
+    undefined=jinja2.StrictUndefined,  # Raise on unknown variables instead of silently empty
 )
 
 
