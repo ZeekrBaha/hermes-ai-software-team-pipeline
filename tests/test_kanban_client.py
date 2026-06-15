@@ -1,7 +1,7 @@
 """Tests for KanbanClient Protocol + FakeKanbanClient (T7)."""
 from __future__ import annotations
 
-from team_pipeline.kanban_client import FakeKanbanClient, KanbanClient
+from team_pipeline.kanban_client import FakeKanbanClient, HermesError, KanbanClient
 
 # ---------------------------------------------------------------------------
 # Helpers
@@ -156,3 +156,41 @@ class TestFakeKanbanClientMisc:
 class TestKanbanClientProtocol:
     def test_fake_is_instance_of_protocol(self, fake_client) -> None:
         assert isinstance(fake_client, KanbanClient)
+
+
+# ---------------------------------------------------------------------------
+# HermesError
+# ---------------------------------------------------------------------------
+
+
+class TestHermesError:
+    def _make(self) -> HermesError:
+        return HermesError(
+            cmd=["hermes", "kanban", "create"],
+            returncode=1,
+            stderr="error msg",
+        )
+
+    def test_stores_cmd(self) -> None:
+        assert self._make().cmd == ["hermes", "kanban", "create"]
+
+    def test_stores_returncode(self) -> None:
+        assert self._make().returncode == 1
+
+    def test_stores_stderr(self) -> None:
+        assert self._make().stderr == "error msg"
+
+    def test_is_instance_of_exception(self) -> None:
+        assert isinstance(self._make(), Exception)
+
+    def test_can_be_caught_as_exception(self) -> None:
+        caught = False
+        try:
+            raise HermesError(
+                cmd=["hermes", "kanban", "create"],
+                returncode=1,
+                stderr="error msg",
+            )
+        except Exception:
+            caught = True
+        assert caught
