@@ -91,10 +91,42 @@ The graph YAML was generated with:
 uv run team-pipeline preview --idea "Build Prompt Regression Lab"
 ```
 
+## Architecture
+
+The CLI is a thin coordinator over six pure-Python layers:
+
+```
+cli.py          # Typer commands — parses args, calls services, formats output
+├── planner.py  # build_plan(idea, workflow) → Plan  [pure, no I/O]
+├── runner.py   # create_pipeline(plan, client) → list[CreatedTask]
+├── doctor.py   # run_doctor(client) → DoctorResult
+└── validators.py  # validate(text, role) → ValidationResult  [pure]
+
+idea.py         # normalize_string / normalize_file → IdeaRecord
+workflow.py     # FULL_SDLC Workflow + load(name)
+graph.py        # topo_sort_raw, topo_sort, validate_acyclic, parents
+roles.py        # ROLES registry: 8 RoleContracts with required sections + evidence rules
+templates.py    # render(role, idea) → str  via Jinja2
+kanban_client.py # KanbanClient Protocol + FakeKanbanClient + HermesKanbanClient
+config.py       # paths, profile names, defaults (stub)
+```
+
+**Key seam:** `KanbanClient` is a `Protocol`; tests inject `FakeKanbanClient` (idempotent, records calls). `HermesKanbanClient` wraps the real `hermes kanban` subprocess using args lists (no `shell=True`).
+
+**Tech stack:** Python 3.11+, uv, Typer, Jinja2, pytest, ruff, mypy. Zero custom DB — Hermes owns the board.
+
+## Limitations & Next Steps
+
+- **Hermes profiles must be pre-created** — `doctor` flags missing ones but cannot create them automatically.
+- **Single-board only** — `--board` is forwarded to Hermes but Hermes v0.16.0 is effectively single-tenant in practice; multi-board orchestration is a non-goal for v1.
+- **No auto-dispatch** — the tool builds the graph; run `hermes kanban dispatch` to start workers.
+- **YAML workflow import** — `full-sdlc` is hardcoded; the `--workflow` flag is a stub for future pluggable DAGs.
+- **Review/QA workspace** — reviewer and QA roles default to `scratch`; wiring them to the impl worktree path (`dir:<path>`) requires verifying Hermes worktree path resolution at create-time.
+
 ## Development
 
 ```bash
-uv run pytest          # run tests
-uv run ruff check src  # lint
-uv run mypy src        # type check
+make test   # uv run pytest tests/ -v
+make lint   # uv run ruff check src/ tests/
+make type   # uv run mypy src/
 ```
