@@ -19,7 +19,7 @@ class RoleContract:
     evidence_rules: tuple[EvidenceRule, ...]
 
 
-Roles: dict[str, RoleContract] = {
+ROLES: dict[str, RoleContract] = {
     "pm": RoleContract(
         role_key="pm",
         profile="pm-agent",
@@ -73,6 +73,11 @@ Roles: dict[str, RoleContract] = {
                 name="test command output block",
                 pattern=r"```[\s\S]*?```",
                 description="Output of test command must appear in a fenced code block",
+            ),
+            EvidenceRule(
+                name="changed-files list",
+                pattern=r"(?:^|\n)(?:##\s*[Cc]hanged\s+[Ff]iles|[-*]\s+[\w./]+\.\w+)",
+                description="Implementation notes must include a changed-files list",
             ),
         ),
     ),
@@ -152,4 +157,4 @@ def get_role(role_key: str) -> RoleContract:
 
     Raises KeyError for an unknown role_key.
     """
-    return Roles[role_key]
+    return ROLES[role_key]

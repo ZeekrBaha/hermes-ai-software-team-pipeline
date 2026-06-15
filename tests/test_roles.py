@@ -5,7 +5,7 @@ import re
 
 import pytest
 
-from team_pipeline.roles import EvidenceRule, RoleContract, Roles, get_role
+from team_pipeline.roles import ROLES, EvidenceRule, RoleContract, get_role
 
 EXPECTED_ROLE_KEYS = {
     "pm",
@@ -30,34 +30,34 @@ EXPECTED_PROFILES = {
 }
 
 
-class TestRolesRegistry:
+class TestROLESRegistry:
     def test_roles_has_exactly_8_keys(self) -> None:
-        assert len(Roles) == 8
+        assert len(ROLES) == 8
 
     def test_all_8_role_keys_present(self) -> None:
-        assert set(Roles.keys()) == EXPECTED_ROLE_KEYS
+        assert set(ROLES.keys()) == EXPECTED_ROLE_KEYS
 
     def test_every_value_is_role_contract(self) -> None:
-        for key, contract in Roles.items():
+        for key, contract in ROLES.items():
             assert isinstance(contract, RoleContract), f"{key} is not a RoleContract"
 
     def test_every_contract_has_non_empty_required_sections(self) -> None:
-        for key, contract in Roles.items():
+        for key, contract in ROLES.items():
             assert len(contract.required_sections) > 0, (
                 f"{key} has empty required_sections"
             )
 
     def test_all_8_profiles_match_expected(self) -> None:
         for role_key, expected_profile in EXPECTED_PROFILES.items():
-            assert Roles[role_key].profile == expected_profile, (
+            assert ROLES[role_key].profile == expected_profile, (
                 f"{role_key}: expected profile {expected_profile!r}, "
-                f"got {Roles[role_key].profile!r}"
+                f"got {ROLES[role_key].profile!r}"
             )
 
 
 class TestPmContract:
     def setup_method(self) -> None:
-        self.contract = Roles["pm"]
+        self.contract = ROLES["pm"]
 
     def test_pm_role_key(self) -> None:
         assert self.contract.role_key == "pm"
@@ -87,7 +87,7 @@ class TestPmContract:
 
 class TestSeniorDevContract:
     def setup_method(self) -> None:
-        self.contract = Roles["senior-dev"]
+        self.contract = ROLES["senior-dev"]
 
     def test_senior_dev_has_verdict_section(self) -> None:
         assert "Verdict" in self.contract.required_sections
@@ -122,9 +122,36 @@ class TestSeniorDevContract:
         assert rule.description
 
 
+class TestJuniorDevContract:
+    def setup_method(self) -> None:
+        self.contract = ROLES["junior-dev"]
+
+    def test_junior_dev_has_exactly_2_evidence_rules(self) -> None:
+        assert len(self.contract.evidence_rules) == 2, (
+            f"junior-dev should have exactly 2 evidence rules, "
+            f"got {len(self.contract.evidence_rules)}"
+        )
+
+    def test_junior_dev_changed_files_pattern_matches_heading(self) -> None:
+        """Changed-files rule must match a '## Changed files' heading."""
+        import re
+        rule = next(
+            r for r in self.contract.evidence_rules if r.name == "changed-files list"
+        )
+        assert re.search(rule.pattern, "## Changed files", re.MULTILINE)
+
+    def test_junior_dev_changed_files_pattern_matches_file_list_item(self) -> None:
+        """Changed-files rule must match a list item like '- src/foo.py'."""
+        import re
+        rule = next(
+            r for r in self.contract.evidence_rules if r.name == "changed-files list"
+        )
+        assert re.search(rule.pattern, "- src/foo.py", re.MULTILINE)
+
+
 class TestJuniorQaContract:
     def setup_method(self) -> None:
-        self.contract = Roles["junior-qa"]
+        self.contract = ROLES["junior-qa"]
 
     def test_junior_qa_has_test_plan_section(self) -> None:
         assert "Test plan" in self.contract.required_sections
