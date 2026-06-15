@@ -2,7 +2,9 @@
 from __future__ import annotations
 
 import builtins
-from typing import Protocol, runtime_checkable
+import json
+import subprocess
+from typing import Any, Protocol, runtime_checkable
 
 # ---------------------------------------------------------------------------
 # Exceptions
@@ -141,15 +143,34 @@ class FakeKanbanClient:
 
 
 # ---------------------------------------------------------------------------
-# Real client (stub — implemented in T9)
+# Real client (T9)
 # ---------------------------------------------------------------------------
 
 
 class HermesKanbanClient:
-    """Thin wrapper around the ``hermes`` CLI (implemented in T9)."""
+    """Real Hermes Kanban client using subprocess."""
+
+    def __init__(self, hermes_path: str = "hermes") -> None:
+        self._hermes = hermes_path
+
+    def _run(self, args: list[str], *, capture_json: bool = False) -> Any:
+        """Run hermes subprocess. Raises HermesError on non-zero exit.
+
+        args: the full argument list AFTER "hermes" (e.g. ["kanban","create",...])
+        If capture_json=True, parses stdout as JSON and returns it.
+        """
+        cmd = [self._hermes] + args
+        result = subprocess.run(cmd, capture_output=True, text=True)
+        if result.returncode != 0:
+            raise HermesError(
+                cmd=cmd, returncode=result.returncode, stderr=result.stderr
+            )
+        if capture_json:
+            return json.loads(result.stdout)
+        return None
 
     def init(self, board: str) -> None:
-        raise NotImplementedError("HermesKanbanClient is implemented in T9")
+        self._run(["kanban", "init"])
 
     def create(
         self,
@@ -164,16 +185,41 @@ class HermesKanbanClient:
         skills: list[str],
         board: str,
     ) -> str:
-        raise NotImplementedError("HermesKanbanClient is implemented in T9")
+        args = [
+            "kanban", "create", title,
+            "--body", body,
+            "--assignee", assignee,
+            "--workspace", workspace,
+            "--idempotency-key", idempotency_key,
+            "--json",
+        ]
+        for parent in parents:
+            args.extend(["--parent", parent])
+        for skill in skills:
+            args.extend(["--skill", skill])
+        if branch:
+            args.extend(["--branch", branch])
+        data = self._run(args, capture_json=True)
+        return data["id"]
 
     def link(self, parent_id: str, child_id: str, *, board: str) -> None:
-        raise NotImplementedError("HermesKanbanClient is implemented in T9")
+        self._run(["kanban", "link", parent_id, child_id])
 
     def list(self, *, board: str, root: str | None) -> builtins.list[dict]:  # type: ignore[type-arg]
-        raise NotImplementedError("HermesKanbanClient is implemented in T9")
+        args = ["kanban", "list", "--json"]
+        if root:
+            args.extend(["--root", root])
+        data = self._run(args, capture_json=True)
+        return data if isinstance(data, builtins.list) else []
 
     def assignees(self) -> builtins.list[str]:
-        raise NotImplementedError("HermesKanbanClient is implemented in T9")
+        data = self._run(["kanban", "assignees", "--json"], capture_json=True)
+        if isinstance(data, builtins.list):
+            return [item["name"] for item in data]
+        return []
 
     def version(self) -> str:
-        raise NotImplementedError("HermesKanbanClient is implemented in T9")
+        result = subprocess.run(
+            [self._hermes, "--version"], capture_output=True, text=True
+        )
+        return result.stdout.strip()

@@ -1,7 +1,19 @@
 """Tests for KanbanClient Protocol + FakeKanbanClient (T7)."""
 from __future__ import annotations
 
-from team_pipeline.kanban_client import FakeKanbanClient, HermesError, KanbanClient
+import json
+import re
+from pathlib import Path
+from unittest.mock import MagicMock, patch
+
+import pytest
+
+from team_pipeline.kanban_client import (
+    FakeKanbanClient,
+    HermesError,
+    HermesKanbanClient,
+    KanbanClient,
+)
 
 # ---------------------------------------------------------------------------
 # Helpers
@@ -194,3 +206,61 @@ class TestHermesError:
         except Exception:
             caught = True
         assert caught
+
+
+# ---------------------------------------------------------------------------
+# HermesKanbanClient — arg builder, JSON parser, error propagation (T9)
+# ---------------------------------------------------------------------------
+
+
+_FIXTURES = Path(__file__).parent / "fixtures"
+
+
+class TestHermesKanbanClientArgBuilder:
+    def test_create_json_fixture_has_id_field(self) -> None:
+        """The real create --json fixture has an 'id' field starting with 't_'."""
+        data = json.loads((_FIXTURES / "create.json").read_text())
+        assert "id" in data
+        assert data["id"].startswith("t_")
+
+    def test_create_json_fixture_id_format(self) -> None:
+        """id is 't_' followed by exactly 8 lowercase hex characters."""
+        data = json.loads((_FIXTURES / "create.json").read_text())
+        assert re.match(r"t_[0-9a-f]{8}$", data["id"])
+
+    def test_hermes_error_on_nonzero_exit(self) -> None:
+        """HermesKanbanClient._run raises HermesError when subprocess exits non-zero."""
+        client = HermesKanbanClient(hermes_path="hermes")
+        mock_result = MagicMock()
+        mock_result.returncode = 1
+        mock_result.stderr = "command not found"
+        with patch("subprocess.run", return_value=mock_result):
+            with pytest.raises(HermesError) as exc_info:
+                client._run(["kanban", "create", "test"])
+        assert exc_info.value.returncode == 1
+        assert exc_info.value.stderr == "command not found"
+
+    def test_hermes_no_shell_true(self) -> None:
+        """_run never passes shell=True — security requirement."""
+        client = HermesKanbanClient()
+        mock_result = MagicMock()
+        mock_result.returncode = 0
+        mock_result.stdout = ""
+        with patch("subprocess.run", return_value=mock_result) as mock_run:
+            try:
+                client._run(["kanban", "init"])
+            except Exception:
+                pass
+            for c in mock_run.call_args_list:
+                assert c.kwargs.get("shell") is not True
+
+    def test_assignees_extracts_name_field(self) -> None:
+        """assignees() extracts 'name' from each item in the JSON array."""
+        client = HermesKanbanClient()
+        fake_data = [
+            {"name": "pm-agent", "on_disk": True},
+            {"name": "ux-agent", "on_disk": False},
+        ]
+        with patch.object(client, "_run", return_value=fake_data):
+            result = client.assignees()
+        assert result == ["pm-agent", "ux-agent"]
