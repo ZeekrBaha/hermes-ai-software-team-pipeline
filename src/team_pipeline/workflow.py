@@ -1,0 +1,128 @@
+"""SDLC workflow definition."""
+from __future__ import annotations
+
+from dataclasses import dataclass
+
+
+@dataclass(frozen=True)
+class TaskSpec:
+    step_key: str
+    title_tmpl: str
+    profile: str
+    workspace: str
+    branch: str | None
+    template: str
+    role: str
+
+
+@dataclass(frozen=True)
+class Workflow:
+    name: str
+    tasks: tuple[TaskSpec, ...]
+    edges: tuple[tuple[str, str], ...]  # (parent_step, child_step)
+
+
+FULL_SDLC = Workflow(
+    name="full-sdlc",
+    tasks=(
+        TaskSpec(
+            step_key="pm",
+            title_tmpl="PM spec for {title}",
+            profile="pm-agent",
+            workspace="scratch",
+            branch=None,
+            template="pm_spec.md.j2",
+            role="pm",
+        ),
+        TaskSpec(
+            step_key="ux",
+            title_tmpl="UX/product design for {title}",
+            profile="ux-designer-agent",
+            workspace="scratch",
+            branch=None,
+            template="ux_design.md.j2",
+            role="ux",
+        ),
+        TaskSpec(
+            step_key="arch",
+            title_tmpl="Architecture plan for {title}",
+            profile="architect-agent",
+            workspace="scratch",
+            branch=None,
+            template="architecture.md.j2",
+            role="architect",
+        ),
+        TaskSpec(
+            step_key="impl",
+            title_tmpl="Implement MVP for {title}",
+            profile="junior-dev-agent",
+            workspace="worktree",
+            branch="wt/{slug}-impl",
+            template="impl_task.md.j2",
+            role="junior-dev",
+        ),
+        TaskSpec(
+            step_key="review",
+            title_tmpl="Senior dev review for {title}",
+            profile="senior-dev-reviewer",
+            workspace="scratch",
+            branch=None,
+            template="senior_dev_review.md.j2",
+            role="senior-dev",
+        ),
+        TaskSpec(
+            step_key="fix",
+            title_tmpl="Fix review findings for {title}",
+            profile="junior-dev-agent",
+            workspace="worktree",
+            branch="wt/{slug}-impl",
+            template="impl_task.md.j2",
+            role="junior-dev",
+        ),
+        TaskSpec(
+            step_key="jqa",
+            title_tmpl="Junior QA test pass for {title}",
+            profile="junior-qa-agent",
+            workspace="scratch",
+            branch=None,
+            template="junior_qa_report.md.j2",
+            role="junior-qa",
+        ),
+        TaskSpec(
+            step_key="sqa",
+            title_tmpl="Senior QA audit for {title}",
+            profile="senior-qa-agent",
+            workspace="scratch",
+            branch=None,
+            template="senior_qa_audit.md.j2",
+            role="senior-qa",
+        ),
+        TaskSpec(
+            step_key="handoff",
+            title_tmpl="Final handoff + README polish for {title}",
+            profile="release-agent",
+            workspace="scratch",
+            branch=None,
+            template="handoff.md.j2",
+            role="release",
+        ),
+    ),
+    edges=(
+        ("pm", "ux"),
+        ("pm", "arch"),
+        ("ux", "impl"),
+        ("arch", "impl"),
+        ("impl", "review"),
+        ("review", "fix"),
+        ("fix", "jqa"),
+        ("jqa", "sqa"),
+        ("sqa", "handoff"),
+    ),
+)
+
+
+def load(name: str) -> Workflow:
+    """Return the Workflow for the given name. Raises ValueError for unknown names."""
+    if name == "full-sdlc":
+        return FULL_SDLC
+    raise ValueError(f"Unknown workflow: {name!r}")

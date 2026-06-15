@@ -1,0 +1,24 @@
+[
+  {
+    "id": "t_25f9ca9c",
+    "title": "Fable re-analyze production Playwright framework: lint, CI/CD, security",
+    "body": "Use Claude Code with model fable to re-analyze...",
+    "assignee": "default",
+    "status": "done",
+    "priority": 100,
+    "tenant": null,
+    "workspace_kind": "dir",
+    "workspace_path": "/Users/baha/Desktop/llm-ai-projects/IBG",
+    "branch_name": null,
+    "created_by": "user",
+    "created_at": 1781284762,
+    "started_at": 1781284769,
+    "completed_at": 1781285161,
+    "result": null,
+    "skills": ["claude-code"],
+    "max_retries": null,
+    "session_id": null,
+    "workflow_template_id": null,
+    "current_step_key": null
+  }
+]
