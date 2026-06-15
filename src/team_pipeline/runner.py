@@ -1,9 +1,9 @@
 """Pipeline runner — create tasks in topo order, link edges."""
 from __future__ import annotations
 
-from collections import deque
 from dataclasses import dataclass
 
+from team_pipeline.graph import topo_sort_raw
 from team_pipeline.kanban_client import KanbanClient
 from team_pipeline.planner import Plan
 
@@ -14,42 +14,6 @@ class CreatedTask:
     task_id: str
     title: str
     assignee: str
-
-
-# ---------------------------------------------------------------------------
-# Internal helpers
-# ---------------------------------------------------------------------------
-
-
-def _topo_sort_steps(
-    step_keys: list[str], edges: list[tuple[str, str]]
-) -> list[str]:
-    """Kahn's algorithm: return step_keys in topological order.
-
-    Raises ValueError if a cycle is detected.
-    """
-    in_degree: dict[str, int] = {k: 0 for k in step_keys}
-    children: dict[str, list[str]] = {k: [] for k in step_keys}
-
-    for parent, child in edges:
-        children[parent].append(child)
-        in_degree[child] += 1
-
-    queue: deque[str] = deque(k for k in step_keys if in_degree[k] == 0)
-    order: list[str] = []
-
-    while queue:
-        node = queue.popleft()
-        order.append(node)
-        for child in children[node]:
-            in_degree[child] -= 1
-            if in_degree[child] == 0:
-                queue.append(child)
-
-    if len(order) != len(step_keys):
-        raise ValueError("Cycle detected in plan graph: topological sort incomplete.")
-
-    return order
 
 
 # ---------------------------------------------------------------------------
@@ -74,7 +38,7 @@ def create_pipeline(
     - Returns list[CreatedTask] in topo_sort order.
     """
     step_keys = [t.spec.step_key for t in plan.tasks]
-    order = _topo_sort_steps(step_keys, plan.edges)
+    order = topo_sort_raw(step_keys, plan.edges)
 
     # Build step_key → PlannedTask lookup
     task_lookup = {t.spec.step_key: t for t in plan.tasks}

@@ -249,3 +249,31 @@ def test_summarize_empty_list():
     result = summarize([])
     assert isinstance(result, str)
     assert result  # non-empty even for empty input
+
+
+# ---------------------------------------------------------------------------
+# create_pipeline — error propagation (AC1.4)
+# ---------------------------------------------------------------------------
+
+
+def test_create_pipeline_propagates_hermes_error(fake_client, sample_idea):
+    """AC1.4: HermesError from client.create bubbles up to caller."""
+    from team_pipeline.kanban_client import HermesError
+
+    # Make fake_client raise on the first create call
+    original_create = fake_client.create
+    call_count = [0]
+
+    def raising_create(*args, **kwargs):
+        call_count[0] += 1
+        if call_count[0] == 1:
+            raise HermesError(
+                cmd=["hermes", "kanban", "create"], returncode=1, stderr="error"
+            )
+        return original_create(*args, **kwargs)
+
+    fake_client.create = raising_create
+
+    plan = build_plan(sample_idea, FULL_SDLC)
+    with pytest.raises(HermesError):
+        create_pipeline(plan, fake_client)

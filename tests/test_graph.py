@@ -3,7 +3,7 @@ from __future__ import annotations
 
 import pytest
 
-from team_pipeline.graph import parents, topo_sort, validate_acyclic
+from team_pipeline.graph import parents, topo_sort, topo_sort_raw, validate_acyclic
 from team_pipeline.workflow import FULL_SDLC, TaskSpec, Workflow
 
 
@@ -76,6 +76,74 @@ class TestTopoSort:
         )
         with pytest.raises(ValueError):
             topo_sort(cyclic)
+
+
+class TestTopoSortRaw:
+    """Tests for topo_sort_raw — same coverage as TestTopoSort but via raw API."""
+
+    def _full_sdlc_args(self) -> tuple[list[str], list[tuple[str, str]]]:
+        step_keys = [t.step_key for t in FULL_SDLC.tasks]
+        edges = list(FULL_SDLC.edges)
+        return step_keys, edges
+
+    def test_returns_nine_step_keys(self) -> None:
+        step_keys, edges = self._full_sdlc_args()
+        order = topo_sort_raw(step_keys, edges)
+        assert len(order) == 9
+
+    def test_pm_before_ux(self) -> None:
+        step_keys, edges = self._full_sdlc_args()
+        order = topo_sort_raw(step_keys, edges)
+        assert order.index("pm") < order.index("ux")
+
+    def test_pm_before_arch(self) -> None:
+        step_keys, edges = self._full_sdlc_args()
+        order = topo_sort_raw(step_keys, edges)
+        assert order.index("pm") < order.index("arch")
+
+    def test_ux_before_impl(self) -> None:
+        step_keys, edges = self._full_sdlc_args()
+        order = topo_sort_raw(step_keys, edges)
+        assert order.index("ux") < order.index("impl")
+
+    def test_arch_before_impl(self) -> None:
+        step_keys, edges = self._full_sdlc_args()
+        order = topo_sort_raw(step_keys, edges)
+        assert order.index("arch") < order.index("impl")
+
+    def test_impl_before_review(self) -> None:
+        step_keys, edges = self._full_sdlc_args()
+        order = topo_sort_raw(step_keys, edges)
+        assert order.index("impl") < order.index("review")
+
+    def test_review_before_fix(self) -> None:
+        step_keys, edges = self._full_sdlc_args()
+        order = topo_sort_raw(step_keys, edges)
+        assert order.index("review") < order.index("fix")
+
+    def test_fix_before_jqa(self) -> None:
+        step_keys, edges = self._full_sdlc_args()
+        order = topo_sort_raw(step_keys, edges)
+        assert order.index("fix") < order.index("jqa")
+
+    def test_jqa_before_sqa(self) -> None:
+        step_keys, edges = self._full_sdlc_args()
+        order = topo_sort_raw(step_keys, edges)
+        assert order.index("jqa") < order.index("sqa")
+
+    def test_sqa_before_handoff(self) -> None:
+        step_keys, edges = self._full_sdlc_args()
+        order = topo_sort_raw(step_keys, edges)
+        assert order.index("sqa") < order.index("handoff")
+
+    def test_handoff_is_last(self) -> None:
+        step_keys, edges = self._full_sdlc_args()
+        order = topo_sort_raw(step_keys, edges)
+        assert order[-1] == "handoff"
+
+    def test_cycle_raises_value_error(self) -> None:
+        with pytest.raises(ValueError):
+            topo_sort_raw(["a", "b", "c"], [("a", "b"), ("b", "c"), ("c", "a")])
 
 
 class TestParents:
