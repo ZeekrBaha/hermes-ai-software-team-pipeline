@@ -173,6 +173,125 @@ class TestJuniorQaContract:
         )
 
 
+class TestUxContract:
+    def setup_method(self) -> None:
+        self.contract = ROLES["ux"]
+
+    def test_ux_has_user_journey_section(self) -> None:
+        assert "User journey" in self.contract.required_sections
+
+    def test_ux_has_page_screen_list_section(self) -> None:
+        assert "Page/screen list" in self.contract.required_sections
+
+    def test_ux_has_wireframe_descriptions_section(self) -> None:
+        assert "Wireframe descriptions" in self.contract.required_sections
+
+    def test_ux_has_accessibility_notes_section(self) -> None:
+        assert "Accessibility notes" in self.contract.required_sections
+
+
+class TestArchitectContract:
+    def setup_method(self) -> None:
+        self.contract = ROLES["architect"]
+
+    def test_architect_has_system_architecture_section(self) -> None:
+        assert "System architecture" in self.contract.required_sections
+
+    def test_architect_has_data_model_section(self) -> None:
+        assert "Data model" in self.contract.required_sections
+
+    def test_architect_has_api_interface_boundaries_section(self) -> None:
+        assert "API/interface boundaries" in self.contract.required_sections
+
+    def test_architect_has_module_structure_section(self) -> None:
+        assert "Module structure" in self.contract.required_sections
+
+    def test_architect_has_tech_choices_section(self) -> None:
+        assert "Tech choices" in self.contract.required_sections
+
+    def test_architect_has_security_considerations_section(self) -> None:
+        assert "Security considerations" in self.contract.required_sections
+
+    def test_architect_has_test_strategy_section(self) -> None:
+        assert "Test strategy" in self.contract.required_sections
+
+    def test_architect_has_implementation_task_split_section(self) -> None:
+        assert "Implementation task split" in self.contract.required_sections
+
+
+class TestSeniorQaContract:
+    def setup_method(self) -> None:
+        self.contract = ROLES["senior-qa"]
+
+    def test_senior_qa_has_coverage_audit_section(self) -> None:
+        assert "Coverage audit" in self.contract.required_sections
+
+    def test_senior_qa_has_gaps_section(self) -> None:
+        assert "Gaps" in self.contract.required_sections
+
+    def test_senior_qa_has_risk_level_section(self) -> None:
+        assert "Risk level" in self.contract.required_sections
+
+    def test_senior_qa_has_exactly_1_evidence_rule(self) -> None:
+        assert len(self.contract.evidence_rules) == 1, (
+            f"senior-qa should have exactly 1 evidence rule, "
+            f"got {len(self.contract.evidence_rules)}"
+        )
+
+    def test_senior_qa_ship_pattern_does_not_match_flagship(self) -> None:
+        rule = self.contract.evidence_rules[0]
+        assert not re.search(rule.pattern, "flagship"), (
+            f"Pattern {rule.pattern!r} should NOT match 'flagship'"
+        )
+
+    def test_senior_qa_ship_pattern_does_not_match_hardship(self) -> None:
+        rule = self.contract.evidence_rules[0]
+        assert not re.search(rule.pattern, "hardship"), (
+            f"Pattern {rule.pattern!r} should NOT match 'hardship'"
+        )
+
+    def test_senior_qa_ship_pattern_does_not_match_relationship(self) -> None:
+        rule = self.contract.evidence_rules[0]
+        assert not re.search(rule.pattern, "relationship"), (
+            f"Pattern {rule.pattern!r} should NOT match 'relationship'"
+        )
+
+    def test_senior_qa_ship_pattern_matches_recommendation_ship(self) -> None:
+        rule = self.contract.evidence_rules[0]
+        assert re.search(rule.pattern, "Recommendation: ship"), (
+            f"Pattern {rule.pattern!r} should match 'Recommendation: ship'"
+        )
+
+    def test_senior_qa_ship_pattern_matches_recommendation_no_ship(self) -> None:
+        rule = self.contract.evidence_rules[0]
+        assert re.search(rule.pattern, "Recommendation: no-ship"), (
+            f"Pattern {rule.pattern!r} should match 'Recommendation: no-ship'"
+        )
+
+
+class TestReleaseContract:
+    def setup_method(self) -> None:
+        self.contract = ROLES["release"]
+
+    def test_release_has_what_was_built_section(self) -> None:
+        assert "What was built" in self.contract.required_sections
+
+    def test_release_has_how_to_run_section(self) -> None:
+        assert "How to run" in self.contract.required_sections
+
+    def test_release_has_how_to_test_section(self) -> None:
+        assert "How to test" in self.contract.required_sections
+
+    def test_release_has_changed_files_section(self) -> None:
+        assert "Changed files" in self.contract.required_sections
+
+    def test_release_has_known_limitations_section(self) -> None:
+        assert "Known limitations" in self.contract.required_sections
+
+    def test_release_has_next_steps_section(self) -> None:
+        assert "Next steps" in self.contract.required_sections
+
+
 class TestGetRole:
     def test_get_role_returns_pm_contract(self) -> None:
         contract = get_role("pm")
@@ -191,6 +310,10 @@ class TestGetRole:
     def test_get_role_raises_key_error_for_empty_string(self) -> None:
         with pytest.raises(KeyError):
             get_role("")
+
+    def test_get_role_error_message_contains_valid_keys(self) -> None:
+        with pytest.raises(KeyError, match="Valid keys"):
+            get_role("nonexistent")
 
 
 class TestEvidenceRule:

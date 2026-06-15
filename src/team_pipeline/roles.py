@@ -76,7 +76,7 @@ ROLES: dict[str, RoleContract] = {
             ),
             EvidenceRule(
                 name="changed-files list",
-                pattern=r"(?:^|\n)(?:##\s*[Cc]hanged\s+[Ff]iles|[-*]\s+[\w./]+\.\w+)",
+                pattern=r"(?:^|\n)(?:##\s*[Cc]hanged\s+[Ff]iles|[-*]\s+[\w./-]+\.\w+)",
                 description="Implementation notes must include a changed-files list",
             ),
         ),
@@ -125,7 +125,7 @@ ROLES: dict[str, RoleContract] = {
         evidence_rules=(
             EvidenceRule(
                 name="ship/no-ship line",
-                pattern=r"(?i)(ship|no.ship)",
+                pattern=r"(?i)\b(no[-\s]ship|ship)\b",
                 description="Explicit ship or no-ship verdict line required",
             ),
         ),
@@ -157,4 +157,6 @@ def get_role(role_key: str) -> RoleContract:
 
     Raises KeyError for an unknown role_key.
     """
+    if role_key not in ROLES:
+        raise KeyError(f"{role_key!r} is not a valid role. Valid keys: {sorted(ROLES)}")
     return ROLES[role_key]
