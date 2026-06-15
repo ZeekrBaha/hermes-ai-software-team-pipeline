@@ -120,6 +120,93 @@ Key implications:
   worktree`. *Action:* design must decide per-role workspace mode (docs roles =
   scratch; dev/fix = worktree; review/QA = read-only on the dev worktree path).
 
+## 9. Hermes CLI Verification (A1/R2/A3)
+
+**Verified 2026-06-14 against Hermes Agent v0.16.0.**
+
+### A1 / R2 — JSON field name for task id
+
+Risk R2 ("task id field unconfirmed") is now resolved.
+
+Running `hermes kanban create "team-pipeline-probe-test" --body "probe" --json` returns:
+
+```json
+{
+  "id": "t_72bc609c",
+  "title": "team-pipeline-probe-test",
+  "body": "probe",
+  "assignee": null,
+  "status": "ready",
+  "priority": 0,
+  "tenant": null,
+  "workspace_kind": "scratch",
+  "workspace_path": null,
+  "branch_name": null,
+  "created_by": "user",
+  "created_at": 1781485854,
+  "started_at": null,
+  "completed_at": null,
+  "result": null,
+  "skills": [],
+  "max_retries": null,
+  "session_id": null,
+  "workflow_template_id": null,
+  "current_step_key": null
+}
+```
+
+**The task id key is `"id"`, value format `"t_<8-hex-chars>"`.** No `task_id` alias exists in the output.
+
+Fixture saved to `tests/fixtures/create.json`.
+
+### A3 — `hermes kanban link` direction
+
+From `hermes kanban link --help`:
+
+```
+usage: hermes kanban link [-h] parent_id child_id
+```
+
+Direction: **`link <parent_id> <child_id>`** — parent→child (the child depends on the parent completing first).
+
+Verified live: created `t_3a561769` (parent) and `t_9daec9db` (child), ran `hermes kanban link t_3a561769 t_9daec9db`. Output: `Linked t_3a561769 -> t_9daec9db`. The child's `show` output confirms `parents: t_3a561769`.
+
+**Implication for HermesKanbanClient:** call `link(parent_id, child_id)` — never reversed.
+
+### list --json shape
+
+`hermes kanban list --json` returns a JSON array. Each item has the same fields as `create --json` output (id, title, body, assignee, status, priority, tenant, workspace_kind, workspace_path, branch_name, created_by, created_at, started_at, completed_at, result, skills, max_retries, session_id, workflow_template_id, current_step_key).
+
+Fixture saved to `tests/fixtures/list.json` (trimmed to 1 representative item).
+
+### assignees --json shape
+
+`hermes kanban assignees --json` returns a JSON array:
+
+```json
+[
+  {
+    "name": "default",
+    "on_disk": true,
+    "counts": { "done": 5 }
+  }
+]
+```
+
+Fields: `name` (string), `on_disk` (bool), `counts` (object mapping status → int).
+
+Fixture saved to `tests/fixtures/assignees.json`.
+
+### Summary of resolved unknowns
+
+| Item | Was | Now |
+|---|---|---|
+| R2: id field name | Assumption: `id` or `task_id` | **Confirmed: `"id"`** |
+| A1: id value format | Unknown | **`"t_<8-hex>"`** |
+| A3: link direction | Unknown | **`link <parent_id> <child_id>`** (parent→child) |
+| list JSON shape | Unknown | **Array of task objects, same schema as create** |
+| assignees JSON shape | Unknown | **Array of `{name, on_disk, counts}` objects** |
+
 ## 8. Open questions to resolve in design (not decided here)
 
 1. CLI framework: Typer vs argparse. (Lean Typer; confirm in architecture.)

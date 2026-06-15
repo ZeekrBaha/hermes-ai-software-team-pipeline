@@ -1,0 +1,22 @@
+{
+  "id": "t_72bc609c",
+  "title": "team-pipeline-probe-test",
+  "body": "probe",
+  "assignee": null,
+  "status": "ready",
+  "priority": 0,
+  "tenant": null,
+  "workspace_kind": "scratch",
+  "workspace_path": null,
+  "branch_name": null,
+  "created_by": "user",
+  "created_at": 1781485854,
+  "started_at": null,
+  "completed_at": null,
+  "result": null,
+  "skills": [],
+  "max_retries": null,
+  "session_id": null,
+  "workflow_template_id": null,
+  "current_step_key": null
+}
