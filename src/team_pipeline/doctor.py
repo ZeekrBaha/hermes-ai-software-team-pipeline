@@ -52,7 +52,7 @@ def run_doctor(client: KanbanClient) -> DoctorResult:
     try:
         hermes_version = client.version()
         hermes_present = True
-    except HermesError:
+    except (HermesError, FileNotFoundError, OSError):
         hermes_present = False
         hermes_version = None
 

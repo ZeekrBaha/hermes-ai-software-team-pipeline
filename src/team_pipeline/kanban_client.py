@@ -170,7 +170,7 @@ class HermesKanbanClient:
         return None
 
     def init(self, board: str) -> None:
-        self._run(["kanban", "init"])
+        self._run(["kanban", "--board", board, "init"])
 
     def create(
         self,
@@ -186,7 +186,7 @@ class HermesKanbanClient:
         board: str,
     ) -> str:
         args = [
-            "kanban", "create", title,
+            "kanban", "--board", board, "create", title,
             "--body", body,
             "--assignee", assignee,
             "--workspace", workspace,
@@ -200,13 +200,20 @@ class HermesKanbanClient:
         if branch:
             args.extend(["--branch", branch])
         data = self._run(args, capture_json=True)
-        return data["id"]
+        try:
+            return data["id"]
+        except (KeyError, TypeError) as exc:
+            raise HermesError(
+                cmd=args,
+                returncode=0,
+                stderr=f"create --json response missing 'id' field: {data!r}",
+            ) from exc
 
     def link(self, parent_id: str, child_id: str, *, board: str) -> None:
-        self._run(["kanban", "link", parent_id, child_id])
+        self._run(["kanban", "--board", board, "link", parent_id, child_id])
 
     def list(self, *, board: str, root: str | None) -> builtins.list[dict]:  # type: ignore[type-arg]
-        args = ["kanban", "list", "--json"]
+        args = ["kanban", "--board", board, "list", "--json"]
         if root:
             args.extend(["--root", root])
         data = self._run(args, capture_json=True)
@@ -222,4 +229,10 @@ class HermesKanbanClient:
         result = subprocess.run(
             [self._hermes, "--version"], capture_output=True, text=True
         )
+        if result.returncode != 0:
+            raise HermesError(
+                cmd=[self._hermes, "--version"],
+                returncode=result.returncode,
+                stderr=result.stderr,
+            )
         return result.stdout.strip()

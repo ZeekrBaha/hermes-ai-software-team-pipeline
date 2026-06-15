@@ -264,3 +264,72 @@ class TestHermesKanbanClientArgBuilder:
         with patch.object(client, "_run", return_value=fake_data):
             result = client.assignees()
         assert result == ["pm-agent", "ux-agent"]
+
+    def test_init_passes_board_flag(self) -> None:
+        """init('myboard') must include '--board' and 'myboard' after 'kanban'."""
+        client = HermesKanbanClient()
+        mock_result = MagicMock()
+        mock_result.returncode = 0
+        mock_result.stdout = ""
+        with patch("subprocess.run", return_value=mock_result) as mock_run:
+            client.init("myboard")
+        args = mock_run.call_args[0][0]
+        kanban_idx = args.index("kanban")
+        assert args[kanban_idx + 1] == "--board"
+        assert args[kanban_idx + 2] == "myboard"
+
+    def test_create_passes_board_flag(self) -> None:
+        """create(...) must include '--board' and 'myboard' after 'kanban'."""
+        client = HermesKanbanClient()
+        mock_result = MagicMock()
+        mock_result.returncode = 0
+        mock_result.stdout = '{"id": "t_abcdef01"}'
+        with patch("subprocess.run", return_value=mock_result) as mock_run:
+            client.create(
+                "My Task",
+                body="body",
+                assignee="pm-agent",
+                parents=[],
+                workspace="scratch",
+                branch=None,
+                idempotency_key="k1",
+                skills=[],
+                board="myboard",
+            )
+        args = mock_run.call_args[0][0]
+        kanban_idx = args.index("kanban")
+        assert args[kanban_idx + 1] == "--board"
+        assert args[kanban_idx + 2] == "myboard"
+
+    def test_version_raises_hermes_error_on_nonzero_returncode(self) -> None:
+        """version() must raise HermesError when the subprocess exits non-zero."""
+        client = HermesKanbanClient()
+        mock_result = MagicMock()
+        mock_result.returncode = 127
+        mock_result.stdout = ""
+        mock_result.stderr = "hermes: command not found"
+        with patch("subprocess.run", return_value=mock_result):
+            with pytest.raises(HermesError) as exc_info:
+                client.version()
+        assert exc_info.value.returncode == 127
+
+    def test_create_raises_hermes_error_when_response_missing_id(self) -> None:
+        """create() raises HermesError when JSON response has no 'id' field."""
+        client = HermesKanbanClient()
+        mock_result = MagicMock()
+        mock_result.returncode = 0
+        mock_result.stdout = '{"status": "ok"}'
+        with patch("subprocess.run", return_value=mock_result):
+            with pytest.raises(HermesError) as exc_info:
+                client.create(
+                    "My Task",
+                    body="body",
+                    assignee="pm-agent",
+                    parents=[],
+                    workspace="scratch",
+                    branch=None,
+                    idempotency_key="k1",
+                    skills=[],
+                    board="myboard",
+                )
+        assert "missing 'id' field" in exc_info.value.stderr

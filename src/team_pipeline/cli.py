@@ -120,18 +120,21 @@ def create(
         idea_record = _parse_idea(idea, from_file, repo_path=repo)
         wf = load_workflow(workflow)
         plan = build_plan(idea_record, wf)
-        if dry_run:
-            _print_plan_table(plan)
-            return
-        client = HermesKanbanClient()
-        created = create_pipeline(plan, client, board=board)
-        typer.echo(_runner_summarize(created))
     except (EmptyIdeaError, ValueError) as exc:
         typer.echo(f"Error: {exc}", err=True)
         raise typer.Exit(1)
     except FileNotFoundError as exc:
         typer.echo(f"Error: {exc}", err=True)
         raise typer.Exit(1)
+
+    if dry_run:
+        _print_plan_table(plan)
+        return
+
+    try:
+        client = HermesKanbanClient()
+        created = create_pipeline(plan, client, board=board)
+        typer.echo(_runner_summarize(created))
     except HermesError as exc:
         typer.echo(f"Error: {exc}", err=True)
         raise typer.Exit(1)

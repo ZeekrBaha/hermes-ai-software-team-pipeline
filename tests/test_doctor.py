@@ -22,13 +22,17 @@ class FakeClientWith(FakeKanbanClient):
         version_str: str = "Hermes Agent v0.16.0 (2026.6.5)",
         assignee_list: list[str] | None = None,
         raise_on_version: bool = False,
+        raise_file_not_found: bool = False,
     ) -> None:
         super().__init__()
         self._version_str = version_str
         self._assignee_list = assignee_list if assignee_list is not None else []
         self._raise_on_version = raise_on_version
+        self._raise_file_not_found = raise_file_not_found
 
     def version(self) -> str:
+        if self._raise_file_not_found:
+            raise FileNotFoundError("No such file or directory: 'hermes'")
         if self._raise_on_version:
             raise HermesError(
                 cmd=["hermes", "--version"],
@@ -181,6 +185,31 @@ class TestRunDoctorHermesAbsent:
         client = FakeClientWith(raise_on_version=True)
         result = run_doctor(client)
         assert set(result.missing_profiles) == set(REQUIRED_PROFILES)
+
+
+# ---------------------------------------------------------------------------
+# run_doctor — hermes binary missing (FileNotFoundError from subprocess)
+# ---------------------------------------------------------------------------
+
+
+class TestRunDoctorFileNotFound:
+    def test_hermes_present_false_on_file_not_found(self) -> None:
+        """FileNotFoundError from version() must result in hermes_present=False."""
+        client = FakeClientWith(raise_file_not_found=True)
+        result = run_doctor(client)
+        assert result.hermes_present is False
+
+    def test_ok_false_on_file_not_found(self) -> None:
+        """FileNotFoundError from version() must result in ok=False."""
+        client = FakeClientWith(raise_file_not_found=True)
+        result = run_doctor(client)
+        assert result.ok is False
+
+    def test_hermes_version_none_on_file_not_found(self) -> None:
+        """hermes_version must be None when binary is missing."""
+        client = FakeClientWith(raise_file_not_found=True)
+        result = run_doctor(client)
+        assert result.hermes_version is None
 
 
 # ---------------------------------------------------------------------------
