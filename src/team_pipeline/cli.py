@@ -39,6 +39,8 @@ app = typer.Typer(help="Hermes AI Software Team Pipeline CLI.")
 def _parse_idea(
     idea: Optional[str],
     from_file: Optional[Path],
+    *,
+    repo_path: Optional[Path] = None,
 ) -> IdeaRecord:
     """Parse idea from --idea text or --from file.
 
@@ -46,9 +48,9 @@ def _parse_idea(
     Raises FileNotFoundError if from_file does not exist.
     """
     if idea is not None:
-        return normalize_string(idea)
+        return normalize_string(idea, repo_path=repo_path)
     if from_file is not None:
-        return normalize_file(from_file)
+        return normalize_file(from_file, repo_path=repo_path)
     raise EmptyIdeaError("Provide --idea <text> or --from <file>.")
 
 
@@ -115,7 +117,7 @@ def create(
 ) -> None:
     """Create the pipeline on Hermes Kanban. Use --dry-run to preview only."""
     try:
-        idea_record = _parse_idea(idea, from_file)
+        idea_record = _parse_idea(idea, from_file, repo_path=repo)
         wf = load_workflow(workflow)
         plan = build_plan(idea_record, wf)
         if dry_run:
