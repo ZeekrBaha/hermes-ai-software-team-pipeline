@@ -1,5 +1,12 @@
 # team-pipeline
 
+> **Archived (2026-07-01):** this repo's role graph and Hermes Kanban dependency
+> have been ported into
+> [agent-fleet-orchestrator](https://github.com/ZeekrBaha/agent-fleet-orchestrator)'s
+> `fleet/pipeline/` module, running on that project's own spawn/evidence/merge
+> APIs instead of Hermes Kanban. See `docs/implementation/pipeline-consolidation/`
+> in that repo for the full port spec and history. No further work is planned here.
+
 A Python CLI that turns a product idea into a complete, reviewed Hermes Kanban role graph — PM → UX → Architect → Junior Dev → Senior Dev Review → Fix → Junior QA → Senior QA → Release.
 
 ## Quickstart
